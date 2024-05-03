@@ -1,4 +1,3 @@
-using UnityEditor;
 using UnityEngine;
 
 public class PlayerMovementBehaviour : MonoBehaviour
@@ -11,6 +10,7 @@ public class PlayerMovementBehaviour : MonoBehaviour
     private string _type = "player";
     private bool _isRunning = false;
     private float _runSpeed;
+    private bool _isCrouching;
 
     public Transform RaycastOriginDown;
     public Transform RaycastOriginDownLeft;
@@ -36,13 +36,14 @@ public class PlayerMovementBehaviour : MonoBehaviour
         RaycastHit2D hitL = Physics2D.Raycast(RaycastOriginDownLeft.position, Vector2.down, RaycastDistance, GroundMask);
         RaycastHit2D hitR = Physics2D.Raycast(RaycastOriginDownRight.position, Vector2.down, RaycastDistance, GroundMask);
         _isGrounded = hit.collider != null || hitL.collider != null || hitR.collider != null;
+        Debug.Log(_isGrounded);
 
         if (_isGrounded)
         {
             _jumpCount = 0;
         }
 
-        if (Input.GetKey(KeyCode.RightArrow))
+        if (Input.GetKey(KeyCode.RightArrow) && !_isCrouching)
         {
             SpriteRenderer.flipX = false;
             RaycastHit2D hit1 = Physics2D.Raycast(RaycastOriginRight.position, Vector2.right, RaycastDistance, GroundMask);
@@ -51,7 +52,7 @@ public class PlayerMovementBehaviour : MonoBehaviour
             if (hit1.collider == null && hit2.collider == null && hit3.collider == null)
                 Rigidbody.velocity = new Vector2(Speed, Rigidbody.velocity.y);
         }
-        else if (Input.GetKey(KeyCode.LeftArrow))
+        else if (Input.GetKey(KeyCode.LeftArrow) && !_isCrouching)
         {
             SpriteRenderer.flipX = true;
             RaycastHit2D hit1 = Physics2D.Raycast(RaycastOriginLeft.position, Vector2.left, RaycastDistance, GroundMask);
@@ -63,19 +64,9 @@ public class PlayerMovementBehaviour : MonoBehaviour
         else
             Rigidbody.velocity = new Vector2(0, Rigidbody.velocity.y);
 
-        if (Input.GetKeyDown(KeyCode.UpArrow) && _isGrounded)
+        if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            Rigidbody.AddForce(Vector2.up * (_type == "cat" ? JumpForce * 1.5f : JumpForce));
-            Animator.SetTrigger("Jump");
-            _jumpCount++;
-        }
-
-        if (Input.GetKeyDown(KeyCode.UpArrow) && !_isGrounded && _jumpCount == 1)
-        {
-            Rigidbody.velocity = Vector2.zero;
-            Rigidbody.AddForce(Vector2.up * (_type == "cat" ? JumpForce * 1.5f : JumpForce));
-            Animator.SetTrigger("DoubleJump");
-            _jumpCount++;
+            Jump();
         }
 
         if (Input.GetKeyDown(KeyCode.T))
@@ -93,10 +84,32 @@ public class PlayerMovementBehaviour : MonoBehaviour
             StopRunning();
         }
 
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            Crouch();
+        }
+
         Animator.SetBool("IsGrounded", _isGrounded);
         Animator.SetFloat("velocityX", Mathf.Abs(Rigidbody.velocity.x));
         Animator.SetFloat("velocityY", Rigidbody.velocity.y);
-        Animator.SetBool("IsRunning", _isRunning);
+    }
+
+    private void Jump()
+    {
+        if (_isGrounded)
+        {
+            Rigidbody.AddForce(Vector2.up * (_type == "cat" ? JumpForce * 1.25f : JumpForce));
+            Animator.SetTrigger("Jump");
+            _jumpCount++;
+        }
+
+        if (!_isGrounded && _jumpCount == 1)
+        {
+            Rigidbody.velocity = Vector2.zero;
+            Rigidbody.AddForce(Vector2.up * (_type == "cat" ? JumpForce * 1.25f : JumpForce));
+            Animator.SetTrigger("DoubleJump");
+            _jumpCount++;
+        }
     }
 
     private void Transformation()
@@ -118,7 +131,8 @@ public class PlayerMovementBehaviour : MonoBehaviour
         if (_type == "cat" && !_isRunning)
         {
             _isRunning = true;
-            Speed = Speed + 15;
+            Speed = Speed + 2;
+            Animator.SetBool("IsRunning", _isRunning);
         }
     }
 
@@ -127,7 +141,17 @@ public class PlayerMovementBehaviour : MonoBehaviour
         if (_type == "cat" && _isRunning)
         {
             _isRunning = false;
-            Speed = Speed - 15;
+            Speed = Speed - 2;
+            Animator.SetBool("IsRunning", _isRunning);
+        }
+    }
+
+    private void Crouch()
+    {
+        if (_type == "cat" && _isGrounded)
+        {
+            _isCrouching = !_isCrouching;
+            Animator.SetBool("IsCrouching", _isCrouching);
         }
     }
 }
